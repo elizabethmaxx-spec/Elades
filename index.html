@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elades Messenger</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; }
+        
+        /* Экран входа */
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: var(--panel); padding: 30px; border-radius: 20px; width: 85%; max-width: 300px; text-align: center; }
+        
+        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #0e1621; color: white; box-sizing: border-box; font-size: 16px; outline: none; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; background: var(--blue); color: white; font-weight: bold; cursor: pointer; font-size: 16px; -webkit-appearance: none; }
+
+        /* Главный экран */
+        #main-app { display: none; flex-direction: column; height: 100vh; }
+        header { background: var(--panel); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #000; }
+        .search-area { background: var(--panel); padding: 10px; display: flex; gap: 8px; }
+        
+        #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+        
+        .bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
+        .me { background: #2b5278; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .them { background: #182533; align-self: flex-start; border-bottom-left-radius: 4px; }
+
+        .input-panel { background: var(--panel); padding: 12px; display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="auth-screen">
+    <div class="auth-card">
+        <h1 style="color: var(--blue); margin: 0;">Elades</h1>
+        <p style="opacity: 0.7; font-size: 14px;">Придумай свой ник</p>
+        <input type="text" id="reg-nick" placeholder="Никнейм..." autocomplete="off">
+        <button class="btn" onclick="startApp()">Начать общение</button>
+    </div>
+</div>
+
+<div id="main-app">
+    <header>
+        <b id="chat-title">Elades</b>
+        <span id="my-name" style="color: var(--blue); font-size: 12px;"></span>
+    </header>
+    <div class="search-area">
+        <input type="text" id="find-user" placeholder="Ник друга..." style="margin:0; flex:1;">
+        <button class="btn" style="width:80px; padding:10px;" onclick="openChat()">Найти</button>
+    </div>
+    <div id="chat-window"></div>
+    <div class="input-panel">
+        <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0; flex:1;">
+        <button class="btn" style="width:60px; padding:10px;" onclick="sendMessage()">🚀</button>
+    </div>
+</div>
+
+<script>
+    // Твой конфиг (исправлен apiKey по токену)
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8Pbrxvhd867uPB2PvhLKZ4LL-3IDBlac",
+        authDomain: "message-b6f96.firebaseapp.com",
+        databaseURL: "https://message-b6f96-default-rtdb.firebaseio.com",
+        projectId: "message-b6f96",
+        storageBucket: "message-b6f96.firebasestorage.app",
+        messagingSenderId: "612390801353",
+        appId: "1:612390801353:web:28b2e3269942dba13f2218"
+    };
+
+    // Инициализация
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let myNick = localStorage.getItem('el_user_nick');
+
+    // Проверка при загрузке
+    if (myNick) {
+        showApp();
+    }
+
+    function startApp() {
+        const nick = document.getElementById('reg-nick').value.trim().toLowerCase();
+        if (nick.length < 2) return alert("Минимум 2 символа!");
+        localStorage.setItem('el_user_nick', nick);
+        showApp();
+    }
+
+    function showApp() {
+        myNick = localStorage.getItem('el_user_nick');
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'flex';
+        document.getElementById('my-name').innerText = "@" + myNick;
+    }
+
+    let chatRef = null;
+
+    function openChat() {
+        const target = document.getElementById('find-user').value.trim().toLowerCase();
+        if (!target || target === myNick) return alert("Введите ник друга!");
+
+        const chatId = [myNick, target].sort().join('_');
+        document.getElementById('chat-title').innerText = "Чат: @" + target;
+        
+        if (chatRef) chatRef.off(); // Отключаем старый чат, если был
+
+        chatRef = db.ref('chats/' + chatId);
+        chatRef.on('value', snap => {
+            const win = document.getElementById('chat-window');
+            win.innerHTML = "";
+            snap.forEach(child => {
+                const m = child.val();
+                const div = document.createElement('div');
+                div.className = 'bubble ' + (m.u === myNick ? 'me' : 'them');
+                div.innerText = m.t;
+                win.appendChild(div);
+            });
+            win.scrollTop = win.scrollHeight;
+        });
+    }
+
+    function sendMessage() {
+        const i = document.getElementById('msg-input');
+        const target = document.getElementById('find-user').value.trim().toLowerCase();
+        if (!i.value || !target) return;
+
+        const chatId = [myNick, target].sort().join('_');
+        db.ref('chats/' + chatId).push({
+            u: myNick,
+            t: i.value,
+            time: Date.now()
+        });
+        i.value = "";
+    }
+</script>
+</body>
+</html>
