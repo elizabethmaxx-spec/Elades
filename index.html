@@ -8,36 +8,54 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow: hidden; }
         
-        /* Навигация */
         .app { display: flex; flex-direction: column; height: 100vh; }
-        header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; }
+        header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; z-index: 10; }
         
-        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; transition: 0.3s; }
+        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; z-index: 10; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--blue); }
 
-        /* Экраны */
-        .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; }
+        .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; position: relative; }
         .screen.active { display: flex; }
 
-        /* Список чатов */
-        .chat-item { padding: 15px; border-bottom: 1px solid #101921; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .chat-item:active { background: #242f3d; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #101921; display: flex; align-items: center; gap: 12px; }
         .avatar { width: 45px; height: 45px; background: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
-        /* Окно сообщений */
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
-        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; }
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 100px; }
+        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; word-wrap: break-word; }
         .bubble img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
         .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 2px; }
         .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 2px; }
 
-        /* Ввод */
-        .input-panel { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; }
-        input[type="text"] { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #333; background: #0e1621; color: white; outline: none; }
-        .icon-btn { cursor: pointer; font-size: 20px; }
+        /* ИСПРАВЛЕННАЯ ПАНЕЛЬ ВВОДА */
+        .input-panel { 
+            background: var(--panel); 
+            padding: 12px 12px 35px 12px; /* Увеличили отступ снизу для полоски навигации */
+            display: flex; 
+            gap: 12px; 
+            align-items: center; 
+            border-top: 1px solid #000;
+            position: fixed; /* Зафиксировали, чтобы не прыгала */
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+        
+        input[type="text"] { 
+            flex: 1; 
+            padding: 12px; 
+            border-radius: 22px; 
+            border: 1px solid #333; 
+            background: var(--bg); 
+            color: white; 
+            outline: none; 
+            font-size: 16px; /* 16px предотвращает зум на iPhone */
+        }
+        
+        .icon-btn { cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; }
         #file-input { display: none; }
     </style>
 </head>
@@ -45,8 +63,8 @@
 
 <div class="app">
     <header>
-        <b id="header-title">Elades</b>
-        <span id="user-tag" style="color: var(--blue); font-size: 12px;"></span>
+        <b id="header-title">Elades Pro</b>
+        <span id="user-tag" style="color: var(--blue); font-size: 12px; font-weight: bold;"></span>
     </header>
 
     <div class="tabs" id="main-tabs">
@@ -55,24 +73,23 @@
     </div>
 
     <div id="screen-list" class="screen active">
-        <div id="chats-container">
-            <div style="text-align: center; margin-top: 50px; opacity: 0.5;">У вас пока нет активных чатов</div>
-        </div>
+        <div id="chats-container"></div>
     </div>
 
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
             <input type="text" id="search-nick" placeholder="Введите ник друга...">
-            <button class="tab active" style="width: 100%; border-radius: 10px; border:none;" onclick="startNewChat()">Найти и написать</button>
+            <button class="tab active" style="width: 100%; border-radius: 12px; border:none; padding: 15px; font-weight: bold;" onclick="startNewChat()">Найти и написать</button>
         </div>
     </div>
 
     <div id="screen-chat" class="screen">
-        <div style="background: var(--panel); padding: 10px; font-size: 14px; cursor: pointer;" onclick="switchTab('list')">⬅️ Назад к списку</div>
+        <div style="background: var(--panel); padding: 12px; font-size: 14px; border-bottom: 1px solid #000; color: var(--blue); font-weight: bold;" onclick="switchTab('list')">⬅️ Назад к чатам</div>
         <div id="chat-window"></div>
+        
         <div class="input-panel">
             <label class="icon-btn">🖼️<input type="file" id="file-input" accept="image/*" onchange="uploadImg()"></label>
-            <input type="text" id="msg-input" placeholder="Сообщение...">
+            <input type="text" id="msg-input" placeholder="Написать..." autocomplete="off">
             <div class="icon-btn" onclick="sendMsg()">🚀</div>
         </div>
     </div>
@@ -91,8 +108,14 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const myNick = localStorage.getItem('el_user_nick') || prompt("Твой ник:");
-    if(myNick) localStorage.setItem('el_user_nick', myNick);
+    
+    // Автоматический ник или запрос
+    let myNick = localStorage.getItem('el_user_nick');
+    if(!myNick) {
+        myNick = prompt("Придумай свой ник:");
+        if(myNick) localStorage.setItem('el_user_nick', myNick.toLowerCase().trim());
+        else location.reload();
+    }
     document.getElementById('user-tag').innerText = "@" + myNick;
 
     let currentChatWith = null;
@@ -107,7 +130,7 @@
 
     function startNewChat() {
         const target = document.getElementById('search-nick').value.trim().toLowerCase();
-        if(!target || target === myNick) return;
+        if(!target || target === myNick) return alert("Введите ник друга!");
         openChat(target);
     }
 
@@ -117,6 +140,7 @@
         switchTab('chat');
         
         const chatId = [myNick, target].sort().join('_');
+        db.ref('chats/' + chatId).off(); // Очистка старых слушателей
         db.ref('chats/' + chatId).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
@@ -130,7 +154,6 @@
             });
             win.scrollTop = win.scrollHeight;
         });
-        // Сохраняем в список контактов
         db.ref('contacts/' + myNick + '/' + target).set(true);
         db.ref('contacts/' + target + '/' + myNick).set(true);
     }
@@ -139,6 +162,10 @@
         db.ref('contacts/' + myNick).on('value', snap => {
             const cont = document.getElementById('chats-container');
             cont.innerHTML = "";
+            if(!snap.exists()) {
+                cont.innerHTML = `<div style="text-align: center; margin-top: 50px; opacity: 0.5;">Нет активных чатов<br>Найдите друга через Поиск</div>`;
+                return;
+            }
             snap.forEach(c => {
                 const name = c.key;
                 const item = document.createElement('div');
@@ -154,7 +181,7 @@
         const i = document.getElementById('msg-input');
         if(!i.value || !currentChatWith) return;
         const chatId = [myNick, currentChatWith].sort().join('_');
-        db.ref('chats/' + chatId).push({ u: myNick, t: i.value });
+        db.ref('chats/' + chatId).push({ u: myNick, t: i.value, time: Date.now() });
         i.value = "";
     }
 
@@ -164,13 +191,17 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             const chatId = [myNick, currentChatWith].sort().join('_');
-            db.ref('chats/' + chatId).push({ u: myNick, img: e.target.result });
+            db.ref('chats/' + chatId).push({ u: myNick, img: e.target.result, time: Date.now() });
         };
         reader.readAsDataURL(file);
     }
+
+    // Обработка Enter
+    document.getElementById('msg-input').onkeypress = function(e) {
+        if(e.key === 'Enter') sendMsg();
+    };
 
     loadChatList();
 </script>
 </body>
 </html>
-                    
