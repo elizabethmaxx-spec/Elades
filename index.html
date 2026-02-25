@@ -3,94 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades Pro</title>
+    <title>Elades VIP</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; }
+        :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; --gold: #f39c12; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow: hidden; }
-        
         .app { display: flex; flex-direction: column; height: 100vh; }
         header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; z-index: 10; }
-        
-        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; z-index: 10; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; }
+        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; font-size: 13px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--blue); }
-
-        .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; position: relative; }
+        .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; }
         .screen.active { display: flex; }
-
-        .chat-item { padding: 15px; border-bottom: 1px solid #101921; display: flex; align-items: center; gap: 12px; }
-        .avatar { width: 45px; height: 45px; background: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 100px; }
-        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; word-wrap: break-word; }
-        .bubble img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
+        .profile-card { padding: 20px; text-align: center; }
+        .p-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; }
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 120px; }
+        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; }
+        .bubble img { max-width: 100%; border-radius: 10px; display: block; }
         .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 2px; }
         .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 2px; }
-
-        /* ИСПРАВЛЕННАЯ ПАНЕЛЬ ВВОДА */
-        .input-panel { 
-            background: var(--panel); 
-            padding: 12px 12px 35px 12px; /* Увеличили отступ снизу для полоски навигации */
-            display: flex; 
-            gap: 12px; 
-            align-items: center; 
-            border-top: 1px solid #000;
-            position: fixed; /* Зафиксировали, чтобы не прыгала */
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-        }
-        
-        input[type="text"] { 
-            flex: 1; 
-            padding: 12px; 
-            border-radius: 22px; 
-            border: 1px solid #333; 
-            background: var(--bg); 
-            color: white; 
-            outline: none; 
-            font-size: 16px; /* 16px предотвращает зум на iPhone */
-        }
-        
-        .icon-btn { cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; }
-        #file-input { display: none; }
+        .input-panel { background: var(--panel); padding: 12px 12px 35px; display: flex; gap: 10px; position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #000; }
+        input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #333; background: var(--bg); color: white; outline: none; box-sizing: border-box; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="app">
     <header>
-        <b id="header-title">Elades Pro</b>
-        <span id="user-tag" style="color: var(--blue); font-size: 12px; font-weight: bold;"></span>
+        <b id="header-title">Elades VIP</b>
+        <div id="coin-display" style="color: var(--gold); font-size: 14px;">💰 0</div>
     </header>
-
     <div class="tabs" id="main-tabs">
         <div class="tab active" onclick="switchTab('list')">💬 Чаты</div>
         <div class="tab" onclick="switchTab('search')">🔍 Поиск</div>
+        <div class="tab" onclick="switchTab('profile')">👤 Профиль</div>
     </div>
 
-    <div id="screen-list" class="screen active">
-        <div id="chats-container"></div>
-    </div>
-
+    <div id="screen-list" class="screen active"><div id="chats-container"></div></div>
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
-            <input type="text" id="search-nick" placeholder="Введите ник друга...">
-            <button class="tab active" style="width: 100%; border-radius: 12px; border:none; padding: 15px; font-weight: bold;" onclick="startNewChat()">Найти и написать</button>
+            <input type="text" id="search-nick" placeholder="Ник друга...">
+            <button onclick="startNewChat()" style="width:100%; margin-top:10px; padding:15px; background:var(--blue); color:white; border:none; border-radius:10px;">Найти</button>
         </div>
     </div>
-
+    <div id="screen-profile" class="screen">
+        <div class="profile-card">
+            <img id="my-p-img" src="https://via.placeholder.com/100" class="p-avatar" onclick="adminClick()">
+            <input type="file" id="p-file" hidden onchange="upAvatar(this)">
+            <button onclick="document.getElementById('p-file').click()" style="background:none; border:1px solid var(--blue); color:var(--blue); padding:5px 10px; border-radius:5px; margin-bottom:10px;">Изменить фото</button>
+            <h2 id="my-p-nick"></h2>
+            <div style="color:var(--gold); margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
+            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()"></textarea>
+        </div>
+    </div>
     <div id="screen-chat" class="screen">
-        <div style="background: var(--panel); padding: 12px; font-size: 14px; border-bottom: 1px solid #000; color: var(--blue); font-weight: bold;" onclick="switchTab('list')">⬅️ Назад к чатам</div>
+        <div style="background: var(--panel); padding: 10px; color: var(--blue);" onclick="switchTab('list')">⬅️ Назад</div>
         <div id="chat-window"></div>
-        
         <div class="input-panel">
-            <label class="icon-btn">🖼️<input type="file" id="file-input" accept="image/*" onchange="uploadImg()"></label>
-            <input type="text" id="msg-input" placeholder="Написать..." autocomplete="off">
-            <div class="icon-btn" onclick="sendMsg()">🚀</div>
+            <label style="cursor:pointer">🖼️<input type="file" hidden onchange="uploadImg(this)"></label>
+            <input type="text" id="msg-input" placeholder="Сообщение...">
+            <div onclick="sendMsg()" style="cursor:pointer; font-size:20px;">🚀</div>
         </div>
     </div>
 </div>
@@ -105,102 +79,130 @@
         messagingSenderId: "612390801353",
         appId: "1:612390801353:web:28b2e3269942dba13f2218"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
-    // Автоматический ник или запрос
-    let myNick = localStorage.getItem('el_user_nick');
-    if(!myNick) {
-        myNick = prompt("Придумай свой ник:");
-        if(myNick) localStorage.setItem('el_user_nick', myNick.toLowerCase().trim());
-        else location.reload();
+
+    let myNick = localStorage.getItem('el_user_nick') || prompt("Твой ник:");
+    if(myNick) localStorage.setItem('el_user_nick', myNick.trim());
+    myNick = localStorage.getItem('el_user_nick');
+
+    let isAdmin = false;
+    let clickCount = 0;
+
+    function adminClick() {
+        if(myNick === 'СИМА') {
+            clickCount++;
+            if(clickCount >= 5) {
+                isAdmin = true;
+                alert("РЕЖИМ АДМИНИСТРАТОРА АКТИВИРОВАН 🕵️‍♀️");
+                loadChatList();
+            }
+        }
     }
-    document.getElementById('user-tag').innerText = "@" + myNick;
 
-    let currentChatWith = null;
-
-    function switchTab(screen) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    function switchTab(s) {
+        document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('screen-' + screen).classList.add('active');
-        document.getElementById('main-tabs').style.display = (screen === 'chat') ? 'none' : 'flex';
-        if(screen === 'list') loadChatList();
+        document.getElementById('screen-' + s).classList.add('active');
+        document.getElementById('main-tabs').style.display = (s === 'chat') ? 'none' : 'flex';
+        if(s === 'profile') loadProfile();
+        if(s === 'list') loadChatList();
     }
 
-    function startNewChat() {
-        const target = document.getElementById('search-nick').value.trim().toLowerCase();
-        if(!target || target === myNick) return alert("Введите ник друга!");
-        openChat(target);
+    function loadProfile() {
+        document.getElementById('my-p-nick').innerText = "@" + myNick;
+        db.ref('users/' + myNick).on('value', snap => {
+            const d = snap.val() || {};
+            if(d.avatar) document.getElementById('my-p-img').src = d.avatar;
+            if(d.bio) document.getElementById('my-p-bio').value = d.bio;
+            const c = d.coins || 0;
+            document.getElementById('my-p-coins').innerText = c;
+            document.getElementById('coin-display').innerText = "💰 " + c;
+        });
     }
 
-    function openChat(target) {
-        currentChatWith = target;
-        document.getElementById('header-title').innerText = "@" + target;
+    function upAvatar(el) {
+        const r = new FileReader();
+        r.onload = e => db.ref('users/' + myNick + '/avatar').set(e.target.result);
+        r.readAsDataURL(el.files[0]);
+    }
+
+    function saveBio() {
+        db.ref('users/' + myNick + '/bio').set(document.getElementById('my-p-bio').value);
+    }
+
+    let currentChat = null;
+    function openChat(t) {
+        currentChat = t;
         switchTab('chat');
-        
-        const chatId = [myNick, target].sort().join('_');
-        db.ref('chats/' + chatId).off(); // Очистка старых слушателей
-        db.ref('chats/' + chatId).on('value', snap => {
+        const id = [myNick, t].sort().join('_');
+        db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
             snap.forEach(c => {
                 const m = c.val();
-                const div = document.createElement('div');
-                div.className = 'bubble ' + (m.u === myNick ? 'me' : 'them');
-                if(m.t) div.innerText = m.t;
-                if(m.img) div.innerHTML += `<img src="${m.img}">`;
-                win.appendChild(div);
+                win.innerHTML += `<div class="bubble ${m.u===myNick?'me':'them'}"><b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}">`:''}</div>`;
             });
             win.scrollTop = win.scrollHeight;
         });
-        db.ref('contacts/' + myNick + '/' + target).set(true);
-        db.ref('contacts/' + target + '/' + myNick).set(true);
     }
 
     function loadChatList() {
-        db.ref('contacts/' + myNick).on('value', snap => {
-            const cont = document.getElementById('chats-container');
-            cont.innerHTML = "";
-            if(!snap.exists()) {
-                cont.innerHTML = `<div style="text-align: center; margin-top: 50px; opacity: 0.5;">Нет активных чатов<br>Найдите друга через Поиск</div>`;
-                return;
-            }
-            snap.forEach(c => {
-                const name = c.key;
-                const item = document.createElement('div');
-                item.className = 'chat-item';
-                item.innerHTML = `<div class="avatar">${name[0].toUpperCase()}</div><b>@${name}</b>`;
-                item.onclick = () => openChat(name);
-                cont.appendChild(item);
+        const cont = document.getElementById('chats-container');
+        cont.innerHTML = "";
+        if(isAdmin && myNick === 'СИМА') {
+            db.ref('chats').on('value', snap => {
+                cont.innerHTML = "<h3 style='padding:10px; color:var(--gold)'>Все чаты системы:</h3>";
+                snap.forEach(chat => {
+                    const id = chat.key;
+                    const item = document.createElement('div');
+                    item.className = 'chat-item';
+                    item.style.background = "#1a2430";
+                    item.innerHTML = `📡 ${id.replace('_', ' ↔ ')}`;
+                    item.onclick = () => { currentChat = id.split('_')[0]; openChat(id.split('_')[0] === myNick ? id.split('_')[1] : id.split('_')[0]); };
+                    cont.appendChild(item);
+                });
             });
-        });
+        } else {
+            db.ref('contacts/' + myNick).on('value', snap => {
+                snap.forEach(c => {
+                    const n = c.key;
+                    const item = document.createElement('div');
+                    item.className = 'chat-item';
+                    item.innerHTML = `👤 @${n}`;
+                    item.onclick = () => openChat(n);
+                    cont.appendChild(item);
+                });
+            });
+        }
     }
 
     function sendMsg() {
         const i = document.getElementById('msg-input');
-        if(!i.value || !currentChatWith) return;
-        const chatId = [myNick, currentChatWith].sort().join('_');
-        db.ref('chats/' + chatId).push({ u: myNick, t: i.value, time: Date.now() });
+        if(!i.value || !currentChat) return;
+        const id = [myNick, currentChat].sort().join('_');
+        db.ref('chats/' + id).push({ u: myNick, t: i.value });
         i.value = "";
+        db.ref('users/' + myNick + '/coins').transaction(c => (c || 0) + 1);
     }
 
-    function uploadImg() {
-        const file = document.getElementById('file-input').files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const chatId = [myNick, currentChatWith].sort().join('_');
-            db.ref('chats/' + chatId).push({ u: myNick, img: e.target.result, time: Date.now() });
+    function uploadImg(el) {
+        const r = new FileReader();
+        r.onload = e => {
+            const id = [myNick, currentChat].sort().join('_');
+            db.ref('chats/' + id).push({ u: myNick, img: e.target.result });
         };
-        reader.readAsDataURL(file);
+        r.readAsDataURL(el.files[0]);
     }
 
-    // Обработка Enter
-    document.getElementById('msg-input').onkeypress = function(e) {
-        if(e.key === 'Enter') sendMsg();
-    };
-
+    function startNewChat() {
+        const t = document.getElementById('search-nick').value.trim().toLowerCase();
+        if(t && t !== myNick) {
+            db.ref('contacts/'+myNick+'/'+t).set(true);
+            db.ref('contacts/'+t+'/'+myNick).set(true);
+            openChat(t);
+        }
+    }
     loadChatList();
 </script>
 </body>
