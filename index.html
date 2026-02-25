@@ -175,7 +175,7 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         cont.innerHTML = "";
-        if(isAdmin && myNick === 'СИМА') {
+        if(isAdmin && myNick === 'сима') {
             db.ref('chats').on('value', snap => {
                 cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
                 snap.forEach(chat => {
