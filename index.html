@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP (Ban Fixed)</title>
+    <title>Elades VIP Final</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -21,11 +21,14 @@
         .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 15px; color: white; position: relative; word-wrap: break-word; }
         .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 4px; }
         .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .system { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--gold); align-self: center; text-align: center; border-radius: 10px; font-size: 12px; width: 90%; color: var(--gold); padding: 5px; }
+        .system { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--gold); align-self: center; text-align: center; border-radius: 10px; font-size: 12px; width: 90%; color: var(--gold); padding: 5px; margin: 5px auto; }
         
         .p-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); margin: 0 auto 10px; border: 3px solid var(--blue); object-fit: cover; display: block; }
         .change-photo-btn { background: transparent; color: var(--blue); border: 1px solid var(--blue); padding: 6px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-bottom: 15px; display: inline-block; }
         
+        .chat-item { padding: 15px; border-bottom: 1px solid #1c2835; display: flex; align-items: center; gap: 12px; cursor: pointer; background: var(--panel); margin: 2px 0; }
+        .chat-item:active { background: #242f3d; }
+
         .input-panel { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #000; position: fixed; bottom: 0; width: 100%; box-sizing: border-box; z-index: 100; }
         input[type="text"] { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: var(--bg); color: white; outline: none; }
         
@@ -41,7 +44,7 @@
     <h1 style="color:var(--red); font-size: 50px; margin:0;">🚫</h1>
     <h2 id="ban-status-text">ДОСТУП ОГРАНИЧЕН</h2>
     <p id="ban-timer" style="color:var(--gold); font-size: 24px; font-weight: bold;"></p>
-    <p style="opacity:0.5;">Срок вашего бана еще не истек.</p>
+    <p style="opacity:0.5;">Сима ограничила ваш доступ.</p>
 </div>
 
 <div class="app" id="main-app">
@@ -57,6 +60,7 @@
     </div>
 
     <div id="screen-list" class="screen active"><div id="chats-container"></div></div>
+    
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
             <input type="text" id="search-nick" placeholder="Ник друга...">
@@ -112,30 +116,24 @@
 
     let isAdmin = false;
     let clickCount = 0;
+    let currentChat = null;
     let banCheckInterval = null;
 
-    // ИСПРАВЛЕННАЯ ЛОГИКА БАНА
     function initBanSystem() {
         db.ref('bans/' + myNick).on('value', snap => {
             const until = snap.val();
             const banScreen = document.getElementById('ban-screen');
             const mainApp = document.getElementById('main-app');
-
             if (until && until > Date.now()) {
                 mainApp.style.display = 'none';
                 banScreen.style.display = 'flex';
-                
                 if (banCheckInterval) clearInterval(banCheckInterval);
-                
                 banCheckInterval = setInterval(() => {
-                    const now = Date.now();
-                    const diff = until - now;
-                    
+                    const diff = until - Date.now();
                     if (diff <= 0) {
                         clearInterval(banCheckInterval);
                         banScreen.style.display = 'none';
                         mainApp.style.display = 'flex';
-                        // Не удаляем из базы сами, админ почистит или просто игнорируем старую дату
                     } else {
                         const sec = Math.floor(diff / 1000);
                         document.getElementById('ban-timer').innerText = `Разбан через: ${Math.floor(sec/60)}м ${sec%60}с`;
@@ -161,7 +159,6 @@
         }
     }
 
-    // ПРОФИЛЬ (Аватарки и Био)
     function loadProfile() {
         document.getElementById('my-p-nick').innerText = "@" + myNick;
         db.ref('users/' + myNick).on('value', snap => {
@@ -177,9 +174,7 @@
         const file = el.files[0];
         if(!file) return;
         const reader = new FileReader();
-        reader.onload = e => {
-            db.ref('users/' + myNick + '/avatar').set(e.target.result);
-        };
+        reader.onload = e => db.ref('users/' + myNick + '/avatar').set(e.target.result);
         reader.readAsDataURL(file);
     }
 
@@ -187,7 +182,6 @@
         db.ref('users/' + myNick + '/bio').set(document.getElementById('my-p-bio').value);
     }
 
-    // ЧАТ И ВСЁ ОСТАЛЬНОЕ
     function switchTab(s) {
         document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -217,12 +211,12 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         db.ref(isAdmin ? 'chats' : 'contacts/' + myNick).on('value', snap => {
-            cont.innerHTML = "";
+            cont.innerHTML = isAdmin ? "<h4 style='padding:10px; color:var(--gold);'>ВСЕ АКТИВНЫЕ ЧАТЫ</h4>" : "";
             snap.forEach(c => {
                 const name = c.key;
                 const div = document.createElement('div');
                 div.className = 'chat-item';
-                div.innerHTML = `<b>${isAdmin ? name.replace('_',' ↔ ') : '@'+name}</b>`;
+                div.innerHTML = `<span>💬</span> <b>${isAdmin ? name.replace('_',' ↔ ') : '@'+name}</b>`;
                 div.onclick = () => openChat(name);
                 cont.appendChild(div);
             });
@@ -236,6 +230,37 @@
         db.ref('chats/' + id).push({ u: myNick, t: inp.value.trim() });
         inp.value = "";
         db.ref('users/' + myNick + '/coins').transaction(c => (c || 0) + 1);
+    }
+
+    function adminGlobalAlert() {
+        const msg = prompt("Текст рассылки:");
+        if(msg) {
+            db.ref('chats').once('value', snap => {
+                snap.forEach(chat => {
+                    db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg });
+                });
+                alert("Рассылка завершена!");
+            });
+        }
+    }
+
+    function adminBanUser() {
+        const user = prompt("Ник:").toLowerCase();
+        const min = parseInt(prompt("Минут:", "5"));
+        if(user && min) db.ref('bans/' + user).set(Date.now() + (min * 60000));
+    }
+
+    function adminGiveCoins() {
+        const user = prompt("Кому:").toLowerCase();
+        const amt = parseInt(prompt("Сколько:"));
+        if(user && amt) db.ref('users/' + user + '/coins').transaction(c => (c || 0) + amt);
+    }
+
+    function adminClearChat() {
+        if(currentChat && confirm("Очистить чат?")) {
+            const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
+            db.ref('chats/' + id).remove();
+        }
     }
 
     function openGifts() {
@@ -259,19 +284,6 @@
         reader.readAsDataURL(file);
     }
 
-    // АДМИН ПАНЕЛЬ
-    function adminBanUser() {
-        const user = prompt("Ник:").toLowerCase();
-        const min = parseInt(prompt("Минут:", "5"));
-        if(user && min) db.ref('bans/' + user).set(Date.now() + (min * 60000));
-    }
-
-    function adminGiveCoins() {
-        const user = prompt("Кому:").toLowerCase();
-        const amt = parseInt(prompt("Сколько:"));
-        if(user && amt) db.ref('users/' + user + '/coins').transaction(c => (c || 0) + amt);
-    }
-
     function startNewChat() {
         const t = document.getElementById('search-nick').value.trim().toLowerCase();
         if(t && t !== myNick) {
@@ -282,6 +294,7 @@
     }
 
     loadProfile();
+    loadChatList();
 </script>
 </body>
 </html>
