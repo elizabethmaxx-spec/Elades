@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP Final Fix</title>
+    <title>Elades VIP Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -24,6 +24,7 @@
         .system { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--gold); align-self: center; text-align: center; border-radius: 10px; font-size: 12px; width: 90%; color: var(--gold); padding: 5px; }
         .bubble img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
+        .p-avatar { width: 90px; height: 90px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; display: block; }
         .input-panel { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #000; position: fixed; bottom: 0; width: 100%; box-sizing: border-box; z-index: 100; }
         input[type="text"] { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: var(--bg); color: white; outline: none; }
         
@@ -40,7 +41,7 @@
     <h1 style="color:var(--red); font-size: 50px; margin:0;">🚫</h1>
     <h2>ДОСТУП ОГРАНИЧЕН</h2>
     <p id="ban-timer" style="color:var(--gold); font-size: 22px; font-weight: bold;"></p>
-    <p style="opacity:0.5;">Вы сможете войти, когда время истечет.</p>
+    <p style="opacity:0.5;">Вы забанены. Попробуйте войти позже.</p>
 </div>
 
 <div class="app" id="main-app">
@@ -66,9 +67,13 @@
 
     <div id="screen-profile" class="screen">
         <div class="profile-card" style="text-align:center; padding:20px;">
-            <div id="my-p-img" onclick="adminClick()" style="width:80px; height:80px; background:var(--blue); border-radius:50%; margin: 0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer;">👤</div>
-            <h2 id="my-p-nick"></h2>
+            <label>
+                <img id="my-p-img" src="https://via.placeholder.com/100" class="p-avatar">
+                <input type="file" hidden onchange="updateAvatar(this)">
+            </label>
+            <h2 id="my-p-nick" onclick="adminClick()">@ник</h2>
             <div style="color:var(--gold); font-size: 20px; margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
+            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="width:90%; height: 80px; background: #182533; color: white; border: 1px solid #333; border-radius: 10px; padding: 10px;"></textarea>
             
             <div id="admin-tools" class="admin-panel">
                 <h4 style="margin:0 0 10px 0; color:var(--gold);">🛠 УПРАВЛЕНИЕ СИМЫ</h4>
@@ -113,7 +118,7 @@
     let myCoins = 0;
     let currentChat = null;
 
-    // ИСПРАВЛЕННАЯ ПРОВЕРКА БАНА
+    // БАН ТАЙМЕР (ИСПРАВЛЕН)
     function checkBan() {
         db.ref('bans/' + myNick).on('value', snap => {
             const until = snap.val();
@@ -121,20 +126,18 @@
                 if(until > Date.now()) {
                     document.getElementById('main-app').style.display = 'none';
                     document.getElementById('ban-screen').style.display = 'flex';
-                    
-                    const updateTimer = () => {
+                    const itv = setInterval(() => {
                         const left = Math.ceil((until - Date.now()) / 1000);
                         if(left <= 0) {
-                            db.ref('bans/' + myNick).remove(); // Чистим базу
-                            location.reload(); // Перезагружаем для входа
+                            clearInterval(itv);
+                            db.ref('bans/' + myNick).remove();
+                            location.reload();
                         } else {
                             document.getElementById('ban-timer').innerText = `Осталось: ${Math.floor(left/60)}м ${left%60}с`;
                         }
-                    };
-                    updateTimer();
-                    const itv = setInterval(updateTimer, 1000);
+                    }, 1000);
                 } else {
-                    db.ref('bans/' + myNick).remove(); // Если время уже вышло
+                    db.ref('bans/' + myNick).remove();
                 }
             }
         });
@@ -148,7 +151,7 @@
                 isAdmin = true;
                 document.getElementById('admin-tools').style.display = 'block';
                 document.getElementById('header-title').innerText = "Elades (ADMIN)";
-                alert("СИМА, ДОСТУП ПОЛУЧЕН! 👑");
+                alert("СИМА, ДОСТУП РАЗРЕШЕН ✨");
             }
         }
     }
@@ -162,6 +165,7 @@
         if(s === 'list') loadChatList();
     }
 
+    // ПРОФИЛЬ (ИСПРАВЛЕН)
     function loadProfile() {
         document.getElementById('my-p-nick').innerText = "@" + myNick;
         db.ref('users/' + myNick).on('value', snap => {
@@ -169,23 +173,39 @@
             myCoins = d.coins || 0;
             document.getElementById('my-p-coins').innerText = myCoins;
             document.getElementById('coin-display').innerText = "💰 " + myCoins;
+            if(d.avatar) document.getElementById('my-p-img').src = d.avatar;
+            if(d.bio) document.getElementById('my-p-bio').value = d.bio;
         });
     }
 
-    // ЛОГИКА ПОДАРКОВ
-    function openGifts() {
-        const choice = prompt("Что подарим?\n1. Роза (10 💎)\n2. Алмаз (100 💎)\n3. Корона (500 💎)");
-        if(choice === "1" && myCoins >= 10) sendGift("🌹 Роза", 10);
-        else if(choice === "2" && myCoins >= 100) sendGift("💎 Алмаз", 100);
-        else if(choice === "3" && myCoins >= 500) sendGift("👑 Корона", 500);
-        else if(choice) alert("Не хватает монет или неверный выбор!");
+    function updateAvatar(el) {
+        const file = el.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            db.ref('users/' + myNick + '/avatar').set(e.target.result);
+        };
+        reader.readAsDataURL(file);
     }
 
-    function sendGift(name, price) {
-        if(!currentChat) return;
+    function saveBio() {
+        const val = document.getElementById('my-p-bio').value;
+        db.ref('users/' + myNick + '/bio').set(val);
+    }
+
+    // ПОДАРКИ
+    function openGifts() {
+        const choice = prompt("Выбери подарок:\n1. 🌹 Роза (10)\n2. 💎 Алмаз (100)\n3. 👑 Корона (500)");
+        if(choice == "1" && myCoins >= 10) sendGift("🌹 Роза", 10);
+        else if(choice == "2" && myCoins >= 100) sendGift("💎 Алмаз", 100);
+        else if(choice == "3" && myCoins >= 500) sendGift("👑 Корона", 500);
+        else if(choice) alert("Недостаточно монет!");
+    }
+
+    function sendGift(t, p) {
         const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
-        db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
-        db.ref('users/' + myNick + '/coins').set(myCoins - price);
+        db.ref('chats/' + id).push({ u: myNick, t: t, isGift: true });
+        db.ref('users/' + myNick + '/coins').set(myCoins - p);
     }
 
     function openChat(t) {
@@ -215,7 +235,7 @@
         const cont = document.getElementById('chats-container');
         const path = isAdmin ? 'chats' : 'contacts/' + myNick;
         db.ref(path).on('value', snap => {
-            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>🌐 АДМИН-ОБЗОР</h3>" : "";
+            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>🌐 АДМИН ПАНЕЛЬ</h3>" : "";
             snap.forEach(c => {
                 const name = c.key;
                 const item = document.createElement('div');
@@ -237,24 +257,24 @@
     }
 
     function uploadImg(el) {
-        if(!el.files[0] || !currentChat) return;
+        const file = el.files[0];
+        if(!file || !currentChat) return;
         const reader = new FileReader();
         reader.onload = e => {
             const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).push({ u: myNick, img: e.target.result });
         };
-        reader.readAsDataURL(el.files[0]);
+        reader.readAsDataURL(file);
     }
 
     function adminBanUser() {
-        const user = prompt("Кого баним?").toLowerCase().trim();
-        if(user === 'сима') return alert("Симу нельзя!");
+        const user = prompt("Ник для бана:").toLowerCase().trim();
         const min = parseInt(prompt("Минут:", "5"));
         if(user && min) db.ref('bans/' + user).set(Date.now() + (min * 60000));
     }
 
     function adminGlobalAlert() {
-        const msg = prompt("Всем:");
+        const msg = prompt("Сообщение для всех:");
         if(msg) db.ref('chats').once('value', snap => {
             snap.forEach(chat => db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg }));
         });
@@ -267,7 +287,7 @@
     }
 
     function adminClearChat() {
-        if(currentChat && confirm("Удалить всё?")) {
+        if(currentChat && confirm("Удалить переписку?")) {
             const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).remove();
         }
