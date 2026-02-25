@@ -3,62 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP Pro</title>
+    <title>Elades VIP Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; --gold: #f39c12; --red: #e74c3c; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow: hidden; }
         .app { display: flex; flex-direction: column; height: 100vh; }
-        header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; }
-        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; font-size: 13px; transition: 0.3s; }
-        .tab.active { opacity: 1; border-bottom: 3px solid var(--blue); color: var(--blue); }
-        .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; }
-        .screen.active { display: flex; }
+        header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; z-index: 100; }
+        .tabs { display: flex; background: var(--panel); border-bottom: 1px solid #000; z-index: 100; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; opacity: 0.6; font-size: 13px; }
+        .tab.active { opacity: 1; border-bottom: 3px solid var(--blue); }
+        .screen { flex: 1; display: none; overflow-y: auto; padding-bottom: 80px; }
+        .screen.active { display: flex; flex-direction: column; }
+        
+        /* ЧАТ ТУТ */
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #0e1621; overflow-y: auto; }
+        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; color: white; position: relative; word-wrap: break-word; }
+        .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .system { background: rgba(243, 156, 18, 0.2); border: 1px solid var(--gold); align-self: center; text-align: center; border-radius: 10px; font-size: 13px; width: 90%; color: var(--gold); }
+        .bubble img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
+        
         .profile-card { padding: 20px; text-align: center; }
-        .p-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; }
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 140px; }
-        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; word-wrap: break-word; }
-        .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 2px; }
-        .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .system-msg { background: rgba(243, 156, 18, 0.15); align-self: center; font-size: 12px; border: 1px dashed var(--gold); color: var(--gold); width: 90%; text-align: center; border-radius: 10px; }
-        .input-panel { background: var(--panel); padding: 12px 12px 40px; display: flex; gap: 10px; position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #000; }
-        input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #333; background: var(--bg); color: white; outline: none; }
-        .chat-item { padding: 15px; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
-        .chat-item:active { background: #1a2430; }
-        .admin-panel { background: #1a2430; margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); display: none; text-align: left; }
-        .admin-btn { background: var(--gold); color: black; border: none; padding: 10px; border-radius: 8px; font-weight: bold; margin: 5px; cursor: pointer; width: calc(50% - 12px); font-size: 12px; }
-        .admin-btn.danger { background: var(--red); color: white; }
+        .p-avatar { width: 90px; height: 90px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; }
+        
+        .input-panel { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #000; position: absolute; bottom: 0; width: 100%; box-sizing: border-box; z-index: 100; }
+        input[type="text"] { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: var(--bg); color: white; outline: none; }
+        
+        .chat-item { padding: 15px; border-bottom: 1px solid #1c2835; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .admin-panel { background: #1a2430; margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); display: none; }
+        .admin-btn { background: var(--gold); color: black; border: none; padding: 8px; border-radius: 5px; font-weight: bold; margin: 5px; cursor: pointer; width: calc(50% - 10px); font-size: 11px; }
     </style>
 </head>
 <body>
 
-<div id="ban-screen" style="display:none; position:fixed; inset:0; background:black; color:white; z-index:10000; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
-    <h1 style="color:var(--red); font-size: 40px;">🚫</h1>
-    <h2>ДОСТУП ОГРАНИЧЕН</h2>
-    <p id="ban-timer" style="color:var(--gold); font-size: 20px; font-weight:bold;"></p>
-    <p style="opacity:0.5;">Вы были заблокированы администратором за нарушение правил системы.</p>
-</div>
-
-<div class="app" id="app-main">
+<div class="app">
     <header>
         <b id="header-title">Elades VIP</b>
         <div id="coin-display" style="color: var(--gold); font-size: 14px; font-weight: bold;">💰 0</div>
     </header>
     
     <div class="tabs" id="main-tabs">
-        <div class="tab active" id="tab-list" onclick="switchTab('list')">💬 Чаты</div>
-        <div class="tab" id="tab-search" onclick="switchTab('search')">🔍 Поиск</div>
-        <div class="tab" id="tab-profile" onclick="switchTab('profile')">👤 Профиль</div>
+        <div class="tab active" onclick="switchTab('list')">💬 Чаты</div>
+        <div class="tab" onclick="switchTab('search')">🔍 Поиск</div>
+        <div class="tab" onclick="switchTab('profile')">👤 Профиль</div>
     </div>
 
-    <div id="screen-list" class="screen active"><div id="chats-container"></div></div>
+    <div id="screen-list" class="screen active">
+        <div id="chats-container"></div>
+    </div>
     
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
-            <input type="text" id="search-nick" placeholder="Введите ник...">
-            <button onclick="startNewChat()" style="width:100%; margin-top:10px; padding:15px; background:var(--blue); color:white; border:none; border-radius:10px; font-weight: bold;">Начать общение</button>
+            <input type="text" id="search-nick" placeholder="Ник друга...">
+            <button onclick="startNewChat()" style="width:100%; margin-top:10px; padding:15px; background:var(--blue); color:white; border:none; border-radius:10px; font-weight: bold;">Найти и написать</button>
         </div>
     </div>
 
@@ -67,25 +66,23 @@
             <img id="my-p-img" src="https://via.placeholder.com/100" class="p-avatar" onclick="adminClick()">
             <h2 id="my-p-nick" style="margin: 0 0 5px 0;"></h2>
             <div style="color:var(--gold); font-size: 20px; margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
-            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="height: 80px;"></textarea>
+            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="width:90%; height: 80px; background: #182533; color: white; border: 1px solid #333; border-radius: 10px; padding: 10px;"></textarea>
             
             <div id="admin-tools" class="admin-panel">
-                <h4 style="margin:0 0 10px 0; color:var(--gold); text-align:center;">🛠 ПАНЕЛЬ УПРАВЛЕНИЯ</h4>
+                <h4 style="margin:0 0 10px 0; color:var(--gold);">🛠 ПАНЕЛЬ СИМЫ</h4>
+                <div id="admin-stats" style="font-size:11px; margin-bottom:10px; opacity: 0.7;">Загрузка статистики...</div>
                 <button class="admin-btn" onclick="adminGlobalAlert()">📢 Рассылка</button>
-                <button class="admin-btn" onclick="adminGiveCoins()">💎 Монеты</button>
-                <button class="admin-btn danger" onclick="adminBanUser()">🚫 Бан</button>
-                <button class="admin-btn danger" onclick="adminClearChat()">🗑 Очистка</button>
-                <p id="admin-stats" style="font-size:10px; opacity:0.5; text-align:center; margin-top:10px;"></p>
+                <button class="admin-btn" onclick="adminGiveCoins()">💎 Дать монеты</button>
+                <button class="admin-btn" style="background:var(--red); color:white;" onclick="adminClearChat()">🗑 Очистить чат</button>
             </div>
         </div>
     </div>
 
     <div id="screen-chat" class="screen">
-        <div style="background: var(--panel); padding: 12px; color: var(--blue); font-weight: bold; border-bottom: 1px solid #000;" onclick="switchTab('list')">⬅️ Назад</div>
+        <div style="background: var(--panel); padding: 12px; color: var(--blue); font-weight: bold; border-bottom: 1px solid #000; cursor: pointer;" onclick="switchTab('list')">⬅️ Назад к списку</div>
         <div id="chat-window"></div>
         <div class="input-panel">
             <div onclick="openGifts()" style="cursor:pointer; font-size:22px;">🎁</div>
-            <label style="cursor:pointer; font-size:22px;">🖼️<input type="file" hidden onchange="uploadImg(this)"></label>
             <input type="text" id="msg-input" placeholder="Сообщение...">
             <div onclick="sendMsg()" style="cursor:pointer; font-size:22px;">🚀</div>
         </div>
@@ -93,6 +90,7 @@
 </div>
 
 <script>
+    // ТВОЙ FIREBASE (Оставил без изменений)
     const firebaseConfig = {
         apiKey: "AIzaSyB8Pbrxvhd867uPB2PvhLKZ4LL-3IDBlac",
         authDomain: "message-b6f96.firebaseapp.com",
@@ -105,31 +103,18 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let myNick = (localStorage.getItem('el_user_nick') || prompt("Твой ник:") || "гость").trim().toLowerCase();
-    localStorage.setItem('el_user_nick', myNick);
+    let myNick = localStorage.getItem('el_user_nick') || prompt("Твой ник:");
+    if(myNick) {
+        myNick = myNick.trim().toLowerCase();
+        localStorage.setItem('el_user_nick', myNick);
+    }
 
     let isAdmin = false;
     let clickCount = 0;
     let myCoins = 0;
     let currentChat = null;
 
-    // ПРОВЕРКА БАНА ПРИ ЗАГРУЗКЕ
-    function checkBanStatus() {
-        db.ref('bans/' + myNick).on('value', snap => {
-            const until = snap.val();
-            if(until && until > Date.now()) {
-                document.getElementById('app-main').style.display = 'none';
-                document.getElementById('ban-screen').style.display = 'flex';
-                const itv = setInterval(() => {
-                    const sec = Math.ceil((until - Date.now()) / 1000);
-                    if(sec <= 0) { clearInterval(itv); location.reload(); }
-                    document.getElementById('ban-timer').innerText = `Разбан через: ${Math.floor(sec/60)}м ${sec%60}с`;
-                }, 1000);
-            }
-        });
-    }
-    checkBanStatus();
-
+    // КЛИК ДЛЯ АДМИНКИ
     function adminClick() {
         if(myNick === 'сима') {
             clickCount++;
@@ -137,60 +122,20 @@
                 isAdmin = true;
                 document.getElementById('admin-tools').style.display = 'block';
                 document.getElementById('header-title').innerText = "Elades (ADMIN)";
-                updateAdminStats();
-                alert("Доступ разрешен, Сима. Панель активирована.");
+                alert("ПРИВЕТ, СИМА! ТЕПЕРЬ ТЫ ВИДИШЬ ВСЁ ✨");
+                loadChatList();
             }
         }
     }
 
-    function updateAdminStats() {
-        db.ref('chats').once('value', s => {
-            document.getElementById('admin-stats').innerText = "Всего чатов в системе: " + s.numChildren();
-        });
-    }
-
-    // АДМИН-ФУНКЦИИ
-    function adminBanUser() {
-        const user = prompt("Ник для бана:").toLowerCase().trim();
-        if(user === 'сима') return alert("Нельзя забанить создателя!");
-        const min = parseInt(prompt("На сколько минут?", "10"));
-        if(user && min) {
-            db.ref('bans/' + user).set(Date.now() + (min * 60000));
-            alert("Пользователь " + user + " заблокирован.");
-        }
-    }
-
-    function adminGlobalAlert() {
-        const msg = prompt("Текст рассылки:");
-        if(!msg) return;
-        db.ref('chats').once('value', snap => {
-            snap.forEach(c => db.ref('chats/' + c.key).push({ u: "SYSTEM", t: "📢 " + msg }));
-            alert("Готово!");
-        });
-    }
-
-    function adminGiveCoins() {
-        const user = prompt("Кому?", myNick);
-        const amt = parseInt(prompt("Сколько?", "500"));
-        if(user && amt) db.ref('users/'+user+'/coins').transaction(c => (c||0)+amt);
-    }
-
-    function adminClearChat() {
-        if(!currentChat) return alert("Чат не выбран");
-        if(confirm("Очистить историю?")) {
-            const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
-            db.ref('chats/' + id).remove();
-        }
-    }
-
-    // ТАБЫ И ПРОФИЛЬ
     function switchTab(s) {
-        currentChat = null; // Сброс при переключении
         document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById('screen-' + s).classList.add('active');
-        document.getElementById('tab-' + s).classList.add('active');
-        document.getElementById('main-tabs').style.display = (s === 'chat') ? 'none' : 'flex';
+        
+        const tabsEl = document.getElementById('main-tabs');
+        tabsEl.style.display = (s === 'chat') ? 'none' : 'flex';
+        
         if(s === 'profile') loadProfile();
         if(s === 'list') loadChatList();
     }
@@ -203,28 +148,48 @@
             document.getElementById('my-p-coins').innerText = myCoins;
             document.getElementById('coin-display').innerText = "💰 " + myCoins;
             if(d.avatar) document.getElementById('my-p-img').src = d.avatar;
-            if(d.bio) document.getElementById('my-p-bio').value = d.bio;
         });
+        if(isAdmin) {
+            db.ref('chats').once('value', s => {
+                document.getElementById('admin-stats').innerText = "Активных чатов в базе: " + s.numChildren();
+            });
+        }
     }
 
-    function saveBio() {
-        db.ref('users/' + myNick + '/bio').set(document.getElementById('my-p-bio').value);
-    }
-
-    // ЛОГИКА ЧАТА
+    // ОТКРЫТИЕ ЧАТА (ИСПРАВЛЕНО)
     function openChat(t) {
         currentChat = t;
         switchTab('chat');
-        const id = t.includes('_') ? t : [myNick, t].sort().join('_');
+        
+        // Генерируем ID чата (если админ - берем готовый ключ, если юзер - создаем связку)
+        const id = (isAdmin && t.includes('_')) ? t : [myNick, t].sort().join('_');
+        
+        db.ref('chats/' + id).off();
         db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
+            
+            if(!snap.exists()) {
+                win.innerHTML = "<div style='text-align:center; opacity:0.3; margin-top:20px;'>Нет сообщений</div>";
+            }
+
             snap.forEach(c => {
                 const m = c.val();
-                let cls = m.u === myNick ? 'me' : 'them';
-                if(m.u === 'SYSTEM') cls = 'bubble system-msg';
-                const gift = m.isGift ? `<b style="color:var(--gold);display:block;">🎁 ПОДАРОК</b>` : '';
-                win.innerHTML += `<div class="bubble ${cls}">${gift}<b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}" style="width:100%;border-radius:10px;margin-top:5px;">`:''}</div>`;
+                let typeClass = 'them';
+                if(m.u === myNick) typeClass = 'me';
+                if(m.u === 'SYSTEM') typeClass = 'system';
+
+                const giftTag = m.isGift ? `<span style="color:var(--gold); font-size:10px; font-weight:bold; display:block;">🎁 ПОДАРОК</span>` : "";
+                
+                const msgHtml = `
+                    <div class="bubble ${typeClass}">
+                        ${giftTag}
+                        <b style="font-size:12px; color: ${m.u === myNick ? '#8ab4f8' : '#fbc02d'}">${m.u}</b><br>
+                        <span style="display:inline-block; margin-top:3px;">${m.t || ''}</span>
+                        ${m.img ? `<img src="${m.img}">` : ''}
+                    </div>
+                `;
+                win.innerHTML += msgHtml;
             });
             win.scrollTop = win.scrollHeight;
         });
@@ -232,17 +197,28 @@
 
     function loadChatList() {
         const cont = document.getElementById('chats-container');
-        cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>📡 Глобальный эфир</h3>" : "";
+        cont.innerHTML = "<div style='padding:20px; text-align:center; opacity:0.5;'>Загрузка чатов...</div>";
         
         const path = isAdmin ? 'chats' : 'contacts/' + myNick;
+        
         db.ref(path).on('value', snap => {
-            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>📡 Глобальный эфир</h3>" : "";
+            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>🌐 ВСЕ ЧАТЫ (ADMIN)</h3>" : "";
+            if(!snap.exists()) cont.innerHTML = "<div style='padding:40px; text-align:center; opacity:0.3;'>У вас пока нет чатов</div>";
+            
             snap.forEach(c => {
+                const name = c.key;
                 const item = document.createElement('div');
                 item.className = 'chat-item';
-                const name = isAdmin ? c.key.replace('_', ' ↔ ') : c.key;
-                item.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:bold;">${name[0].toUpperCase()}</div><b>${name}</b>`;
-                item.onclick = () => openChat(c.key);
+                item.innerHTML = `
+                    <div style="width:45px; height:45px; border-radius:50%; background:var(--msg-me); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
+                        ${name[0].toUpperCase()}
+                    </div>
+                    <div style="flex:1">
+                        <b style="font-size:16px;">${isAdmin ? name.replace('_', ' ↔ ') : '@'+name}</b>
+                        <div style="font-size:12px; opacity:0.5;">Нажмите, чтобы открыть</div>
+                    </div>
+                `;
+                item.onclick = () => openChat(name);
                 cont.appendChild(item);
             });
         });
@@ -250,41 +226,44 @@
 
     function sendMsg() {
         const inp = document.getElementById('msg-input');
-        if(!inp.value || !currentChat) return;
-        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
-        db.ref('chats/' + id).push({ u: myNick, t: inp.value });
+        if(!inp.value.trim() || !currentChat) return;
+        
+        const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
+        
+        db.ref('chats/' + id).push({
+            u: myNick,
+            t: inp.value.trim(),
+            time: Date.now()
+        });
+        
         inp.value = "";
         db.ref('users/' + myNick + '/coins').transaction(c => (c || 0) + 1);
     }
 
-    function uploadImg(el) {
-        if(!el.files[0] || !currentChat) return;
-        const r = new FileReader();
-        r.onload = e => {
-            const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
-            db.ref('chats/' + id).push({ u: myNick, img: e.target.result });
-        };
-        r.readAsDataURL(el.files[0]);
+    // АДМИН-ФУНКЦИИ
+    function adminGlobalAlert() {
+        const msg = prompt("Введите текст для всех чатов:");
+        if(!msg) return;
+        db.ref('chats').once('value', snap => {
+            snap.forEach(chat => {
+                db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg });
+            });
+        });
+        alert("Отправлено!");
     }
 
-    function openGifts() {
-        const g = prompt("1. Алмаз (50💎) 2. Роза (10💎)");
-        if(g === "1" && myCoins >= 50) sendGift("💎 Алмаз", 50);
-        else if(g === "2" && myCoins >= 10) sendGift("🌹 Роза", 10);
-    }
-
-    function sendGift(n, p) {
-        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
-        db.ref('chats/' + id).push({ u: myNick, t: n, isGift: true });
-        db.ref('users/' + myNick + '/coins').set(myCoins - p);
+    function adminGiveCoins() {
+        const user = prompt("Кому (ник):");
+        const amt = parseInt(prompt("Сколько:"));
+        if(user && amt) db.ref('users/' + user.toLowerCase() + '/coins').transaction(c => (c || 0) + amt);
     }
 
     function startNewChat() {
-        const t = document.getElementById('search-nick').value.trim().toLowerCase();
-        if(t && t !== myNick) {
-            db.ref('contacts/'+myNick+'/'+t).set(true);
-            db.ref('contacts/'+t+'/'+myNick).set(true);
-            openChat(t);
+        const target = document.getElementById('search-nick').value.trim().toLowerCase();
+        if(target && target !== myNick) {
+            db.ref('contacts/' + myNick + '/' + target).set(true);
+            db.ref('contacts/' + target + '/' + myNick).set(true);
+            openChat(target);
         }
     }
 
