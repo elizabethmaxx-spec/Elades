@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -35,7 +35,13 @@
 </head>
 <body>
 
-<div class="app">
+<div id="ban-screen" style="display:none; position:fixed; inset:0; background:black; color:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
+    <h1 style="color:var(--red);">ВЫ ЗАБАНЕНЫ! 🚫</h1>
+    <p id="ban-reason" style="font-size:18px;"></p>
+    <p id="ban-timer" style="color:var(--gold); font-weight:bold;"></p>
+</div>
+
+<div class="app" id="app-main">
     <header>
         <b id="header-title">Elades VIP</b>
         <div id="coin-display" style="color: var(--gold); font-size: 14px; font-weight: bold;">💰 0</div>
@@ -66,14 +72,14 @@
             
             <div id="admin-tools" class="admin-panel">
                 <h4 style="margin-top:0; color:var(--gold);">🛠 ПАНЕЛЬ СИМЫ</h4>
-                <div id="admin-stats" style="font-size:11px; margin-bottom:10px;">Активных чатов: ...</div>
+                <div id="admin-stats" style="font-size:11px; margin-bottom:10px;">Загрузка...</div>
                 <button class="admin-btn" onclick="adminGlobalAlert()">📢 Рассылка</button>
                 <button class="admin-btn" onclick="adminGiveCoins()">💎 Дать монеты</button>
+                <button class="admin-btn danger" onclick="adminBanUser()">🚫 Забанить</button>
                 <button class="admin-btn danger" onclick="adminClearChat()">🗑 Очистить чат</button>
-                <button class="admin-btn danger" onclick="location.reload()">🔄 Выйти из админ</button>
             </div>
             
-            <p style="font-size: 10px; opacity: 0.4; margin-top: 20px;">v. 3.0 Admin Panel Enabled</p>
+            <p style="font-size: 10px; opacity: 0.4; margin-top: 20px;">v. 4.0 Admin Ban System</p>
         </div>
     </div>
 
@@ -103,33 +109,73 @@
     const db = firebase.database();
 
     let myNick = localStorage.getItem('el_user_nick') || prompt("Твой ник:");
-    if(myNick) localStorage.setItem('el_user_nick', myNick.trim());
-    myNick = localStorage.getItem('el_user_nick');
+    if(myNick) {
+        myNick = myNick.trim().toLowerCase();
+        localStorage.setItem('el_user_nick', myNick);
+    }
 
     let isAdmin = false;
     let clickCount = 0;
     let myCoins = 0;
 
+    // ПРОВЕРКА БАНА
+    function checkBan() {
+        db.ref('bans/' + myNick).on('value', snap => {
+            const banUntil = snap.val();
+            if(banUntil && banUntil > Date.now()) {
+                document.getElementById('app-main').style.display = 'none';
+                document.getElementById('ban-screen').style.display = 'flex';
+                document.getElementById('ban-reason').innerText = `Сима ограничила вам доступ за нарушение правил.`;
+                
+                const timer = setInterval(() => {
+                    const left = Math.ceil((banUntil - Date.now()) / 1000);
+                    if(left <= 0) {
+                        clearInterval(timer);
+                        location.reload();
+                    }
+                    document.getElementById('ban-timer').innerText = `Разбан через: ${Math.floor(left/60)}м ${left%60}с`;
+                }, 1000);
+            } else {
+                document.getElementById('app-main').style.display = 'flex';
+                document.getElementById('ban-screen').style.display = 'none';
+            }
+        });
+    }
+    checkBan();
+
     function adminClick() {
-        if(myNick && myNick.toLowerCase() === 'сима') {
+        if(myNick === 'сима') {
             clickCount++;
             if(clickCount >= 5) {
                 isAdmin = true;
                 document.getElementById('admin-tools').style.display = 'block';
                 document.getElementById('header-title').innerText = "Elades (ADMIN)";
-                alert("ПРИВЕТ, СИМА! АДМИН-ПАНЕЛЬ В ПРОФИЛЕ ✨");
-                loadChatList();
-                // Загружаем статистику чатов
-                db.ref('chats').once('value', s => {
-                    document.getElementById('admin-stats').innerText = "Всего чатов в базе: " + s.numChildren();
-                });
+                alert("ПРИВЕТ, СИМА! ТЕПЕРЬ ТЫ МОЖЕШЬ БАНИТЬ ЮЗЕРОВ 👊");
+                updateAdminStats();
             }
         }
     }
 
+    function updateAdminStats() {
+        db.ref('chats').once('value', s => {
+            document.getElementById('admin-stats').innerText = "Активных чатов: " + s.numChildren();
+        });
+    }
+
     // --- АДМИН ФУНКЦИИ ---
+    function adminBanUser() {
+        const user = prompt("Введите ник нарушителя для бана:").toLowerCase().trim();
+        if(user === 'сима') return alert("Себя банить нельзя! :)");
+        const minutes = parseInt(prompt("На сколько минут забанить?", "10"));
+        if(user && minutes) {
+            const until = Date.now() + (minutes * 60 * 1000);
+            db.ref('bans/' + user).set(until);
+            alert(`Пользователь ${user} успешно забанен на ${minutes} мин.`);
+        }
+    }
+
     function adminGlobalAlert() {
-        const msg = prompt("Введите сообщение для всех пользователей:");
+        const msg = prompt("Введите сообщение для всех:");
         if(!msg) return;
         db.ref('chats').once('value', snap => {
             snap.forEach(chat => {
@@ -140,24 +186,23 @@
     }
 
     function adminGiveCoins() {
-        const user = prompt("Кому дать монеты (ник):", myNick);
-        const amount = parseInt(prompt("Сколько монет добавить?", "1000"));
+        const user = prompt("Кому дать монеты?", myNick);
+        const amount = parseInt(prompt("Сколько?", "1000"));
         if(user && amount) {
             db.ref('users/' + user + '/coins').transaction(c => (c || 0) + amount);
-            alert("Монетки выданы!");
+            alert("Готово!");
         }
     }
 
     function adminClearChat() {
-        if(!currentChat) return alert("Сначала открой чат, который хочешь очистить!");
-        if(confirm("Удалить ВСЕ сообщения в этом чате?")) {
+        if(!currentChat) return alert("Открой чат!");
+        if(confirm("Удалить всё?")) {
             const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).remove();
-            alert("Чат очищен!");
         }
     }
-    // ---------------------
 
+    // --- БАЗОВЫЕ ФУНКЦИИ ---
     function switchTab(s) {
         document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -179,31 +224,6 @@
             document.getElementById('coin-display').innerText = "💰 " + myCoins;
         });
         if(isAdmin) document.getElementById('admin-tools').style.display = 'block';
-    }
-
-    function openGifts() {
-        const gift = prompt("Выберите подарок:\n1. Бриллиант (50 💎)\n2. Медвежонок (20 💎)\nВведите номер:");
-        if(gift === "1" && myCoins >= 50) sendGift("💎 Бриллиант", 50);
-        else if(gift === "2" && myCoins >= 20) sendGift("🧸 Медвежонок", 20);
-        else if(gift) alert("Недостаточно монет!");
-    }
-
-    function sendGift(name, price) {
-        if(!currentChat) return;
-        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
-        db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
-        db.ref('users/' + myNick + '/coins').set(myCoins - price);
-    }
-
-    function upAvatar(el) {
-        if(!el.files[0]) return;
-        const r = new FileReader();
-        r.onload = e => db.ref('users/' + myNick + '/avatar').set(e.target.result);
-        r.readAsDataURL(el.files[0]);
-    }
-
-    function saveBio() {
-        db.ref('users/' + myNick + '/bio').set(document.getElementById('my-p-bio').value);
     }
 
     let currentChat = null;
@@ -229,14 +249,13 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         cont.innerHTML = "";
-        if(isAdmin && myNick.toLowerCase() === 'сима') {
+        if(isAdmin) {
             db.ref('chats').on('value', snap => {
-                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
+                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold);'>📡 Все чаты:</h3>";
                 snap.forEach(chat => {
                     const chatId = chat.key;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
-                    item.style.background = "#1a2430";
                     item.innerHTML = `🌐 <b>${chatId.replace('_', ' ↔ ')}</b>`;
                     item.onclick = () => openChat(chatId);
                     cont.appendChild(item);
@@ -278,15 +297,38 @@
 
     function startNewChat() {
         const t = document.getElementById('search-nick').value.trim().toLowerCase();
-        if(t && t !== myNick.toLowerCase()) {
+        if(t && t !== myNick) {
             db.ref('contacts/'+myNick+'/'+t).set(true);
             db.ref('contacts/'+t+'/'+myNick).set(true);
             openChat(t);
         }
     }
+
+    function openGifts() {
+        const gift = prompt("1. Бриллиант (50 💎)\n2. Медвежонок (20 💎)");
+        if(gift === "1" && myCoins >= 50) sendGift("💎 Бриллиант", 50);
+        else if(gift === "2" && myCoins >= 20) sendGift("🧸 Медвежонок", 20);
+    }
+
+    function sendGift(name, price) {
+        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
+        db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
+        db.ref('users/' + myNick + '/coins').set(myCoins - price);
+    }
+
+    function upAvatar(el) {
+        if(!el.files[0]) return;
+        const r = new FileReader();
+        r.onload = e => db.ref('users/' + myNick + '/avatar').set(e.target.result);
+        r.readAsDataURL(el.files[0]);
+    }
+
+    function saveBio() {
+        db.ref('users/' + myNick + '/bio').set(document.getElementById('my-p-bio').value);
+    }
+
     loadProfile();
     loadChatList();
 </script>
 </body>
 </html>
-                                   
