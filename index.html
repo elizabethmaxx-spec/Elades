@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP Final</title>
+    <title>Elades VIP Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -60,7 +60,6 @@
     </div>
 
     <div id="screen-list" class="screen active"><div id="chats-container"></div></div>
-    
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
             <input type="text" id="search-nick" placeholder="Ник друга...">
@@ -119,14 +118,17 @@
     let currentChat = null;
     let banCheckInterval = null;
 
+    // СИСТЕМА БАНА
     function initBanSystem() {
         db.ref('bans/' + myNick).on('value', snap => {
             const until = snap.val();
             const banScreen = document.getElementById('ban-screen');
             const mainApp = document.getElementById('main-app');
+
             if (until && until > Date.now()) {
                 mainApp.style.display = 'none';
                 banScreen.style.display = 'flex';
+                
                 if (banCheckInterval) clearInterval(banCheckInterval);
                 banCheckInterval = setInterval(() => {
                     const diff = until - Date.now();
@@ -145,7 +147,6 @@
             }
         });
     }
-    initBanSystem();
 
     function adminClick() {
         if(myNick === 'сима') {
@@ -155,6 +156,7 @@
                 document.getElementById('admin-tools').style.display = 'block';
                 document.getElementById('header-title').innerText = "Elades (ADMIN)";
                 alert("ПАНЕЛЬ СИМЫ АКТИВИРОВАНА! 👑");
+                loadChatList();
             }
         }
     }
@@ -239,25 +241,25 @@
                 snap.forEach(chat => {
                     db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg });
                 });
-                alert("Рассылка завершена!");
+                alert("Рассылка отправлена во все чаты!");
             });
         }
     }
 
     function adminBanUser() {
-        const user = prompt("Ник:").toLowerCase();
-        const min = parseInt(prompt("Минут:", "5"));
+        const user = prompt("Ник юзера:").toLowerCase().trim();
+        const min = parseInt(prompt("На сколько минут?", "5"));
         if(user && min) db.ref('bans/' + user).set(Date.now() + (min * 60000));
     }
 
     function adminGiveCoins() {
-        const user = prompt("Кому:").toLowerCase();
+        const user = prompt("Кому:").toLowerCase().trim();
         const amt = parseInt(prompt("Сколько:"));
         if(user && amt) db.ref('users/' + user + '/coins').transaction(c => (c || 0) + amt);
     }
 
     function adminClearChat() {
-        if(currentChat && confirm("Очистить чат?")) {
+        if(currentChat && confirm("Удалить переписку?")) {
             const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).remove();
         }
@@ -293,6 +295,8 @@
         }
     }
 
+    // Инициализация
+    initBanSystem();
     loadProfile();
     loadChatList();
 </script>
