@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP (Full Admin Edition)</title>
+    <title>Elades VIP Final Fix</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -22,10 +22,7 @@
         .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 4px; }
         .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 4px; }
         .system { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--gold); align-self: center; text-align: center; border-radius: 10px; font-size: 12px; width: 90%; color: var(--gold); padding: 5px; }
-        .bubble img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; border: 1px solid rgba(255,255,255,0.1); }
-        
-        .profile-card { padding: 20px; text-align: center; }
-        .p-avatar { width: 90px; height: 90px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; }
+        .bubble img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
         .input-panel { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #000; position: fixed; bottom: 0; width: 100%; box-sizing: border-box; z-index: 100; }
         input[type="text"] { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: var(--bg); color: white; outline: none; }
@@ -41,9 +38,9 @@
 
 <div id="ban-screen">
     <h1 style="color:var(--red); font-size: 50px; margin:0;">🚫</h1>
-    <h2 id="ban-msg">ВЫ ЗАБАНЕНЫ</h2>
-    <p id="ban-timer" style="color:var(--gold); font-size: 20px; font-weight: bold;"></p>
-    <p style="opacity:0.5;">Сима ограничила вам доступ к системе.</p>
+    <h2>ДОСТУП ОГРАНИЧЕН</h2>
+    <p id="ban-timer" style="color:var(--gold); font-size: 22px; font-weight: bold;"></p>
+    <p style="opacity:0.5;">Вы сможете войти, когда время истечет.</p>
 </div>
 
 <div class="app" id="main-app">
@@ -68,11 +65,10 @@
     </div>
 
     <div id="screen-profile" class="screen">
-        <div class="profile-card">
-            <img id="my-p-img" src="https://via.placeholder.com/100" class="p-avatar" onclick="adminClick()">
+        <div class="profile-card" style="text-align:center; padding:20px;">
+            <div id="my-p-img" onclick="adminClick()" style="width:80px; height:80px; background:var(--blue); border-radius:50%; margin: 0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer;">👤</div>
             <h2 id="my-p-nick"></h2>
             <div style="color:var(--gold); font-size: 20px; margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
-            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="width:90%; height: 80px; background: #182533; color: white; border: 1px solid #333; border-radius: 10px; padding: 10px;"></textarea>
             
             <div id="admin-tools" class="admin-panel">
                 <h4 style="margin:0 0 10px 0; color:var(--gold);">🛠 УПРАВЛЕНИЕ СИМЫ</h4>
@@ -117,18 +113,29 @@
     let myCoins = 0;
     let currentChat = null;
 
-    // ПРОВЕРКА БАНА
+    // ИСПРАВЛЕННАЯ ПРОВЕРКА БАНА
     function checkBan() {
         db.ref('bans/' + myNick).on('value', snap => {
             const until = snap.val();
-            if(until && until > Date.now()) {
-                document.getElementById('main-app').style.display = 'none';
-                document.getElementById('ban-screen').style.display = 'flex';
-                const timer = setInterval(() => {
-                    const left = Math.ceil((until - Date.now()) / 1000);
-                    if(left <= 0) { clearInterval(timer); location.reload(); }
-                    document.getElementById('ban-timer').innerText = `Разбан через: ${Math.floor(left/60)}м ${left%60}с`;
-                }, 1000);
+            if(until) {
+                if(until > Date.now()) {
+                    document.getElementById('main-app').style.display = 'none';
+                    document.getElementById('ban-screen').style.display = 'flex';
+                    
+                    const updateTimer = () => {
+                        const left = Math.ceil((until - Date.now()) / 1000);
+                        if(left <= 0) {
+                            db.ref('bans/' + myNick).remove(); // Чистим базу
+                            location.reload(); // Перезагружаем для входа
+                        } else {
+                            document.getElementById('ban-timer').innerText = `Осталось: ${Math.floor(left/60)}м ${left%60}с`;
+                        }
+                    };
+                    updateTimer();
+                    const itv = setInterval(updateTimer, 1000);
+                } else {
+                    db.ref('bans/' + myNick).remove(); // Если время уже вышло
+                }
             }
         });
     }
@@ -141,7 +148,7 @@
                 isAdmin = true;
                 document.getElementById('admin-tools').style.display = 'block';
                 document.getElementById('header-title').innerText = "Elades (ADMIN)";
-                alert("АДМИН-ПАНЕЛЬ ВКЛЮЧЕНА 👑");
+                alert("СИМА, ДОСТУП ПОЛУЧЕН! 👑");
             }
         }
     }
@@ -165,25 +172,39 @@
         });
     }
 
+    // ЛОГИКА ПОДАРКОВ
+    function openGifts() {
+        const choice = prompt("Что подарим?\n1. Роза (10 💎)\n2. Алмаз (100 💎)\n3. Корона (500 💎)");
+        if(choice === "1" && myCoins >= 10) sendGift("🌹 Роза", 10);
+        else if(choice === "2" && myCoins >= 100) sendGift("💎 Алмаз", 100);
+        else if(choice === "3" && myCoins >= 500) sendGift("👑 Корона", 500);
+        else if(choice) alert("Не хватает монет или неверный выбор!");
+    }
+
+    function sendGift(name, price) {
+        if(!currentChat) return;
+        const id = (isAdmin && currentChat.includes('_')) ? currentChat : [myNick, currentChat].sort().join('_');
+        db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
+        db.ref('users/' + myNick + '/coins').set(myCoins - price);
+    }
+
     function openChat(t) {
         currentChat = t;
         switchTab('chat');
         const id = (isAdmin && t.includes('_')) ? t : [myNick, t].sort().join('_');
-        
         db.ref('chats/' + id).off();
         db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
             snap.forEach(c => {
                 const m = c.val();
-                let cls = (m.u === myNick) ? 'me' : 'them';
-                if(m.u === 'SYSTEM') cls = 'system';
+                let cls = (m.u === myNick) ? 'me' : (m.u === 'SYSTEM' ? 'system' : 'them');
                 win.innerHTML += `
                     <div class="bubble ${cls}">
-                        ${m.isGift ? '🎁 Подарок<br>' : ''}
+                        ${m.isGift ? '<b style="color:var(--gold);">🎁 ПОДАРОК</b><br>' : ''}
                         <b style="font-size:11px; opacity:0.7;">${m.u}</b><br>
                         ${m.t ? `<span>${m.t}</span>` : ''}
-                        ${m.img ? `<img src="${m.img}">` : ''}
+                        ${m.img ? `<img src="${m.img}" style="width:100%;">` : ''}
                     </div>`;
             });
             win.scrollTop = win.scrollHeight;
@@ -194,7 +215,7 @@
         const cont = document.getElementById('chats-container');
         const path = isAdmin ? 'chats' : 'contacts/' + myNick;
         db.ref(path).on('value', snap => {
-            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>🌐 ВСЕ ЧАТЫ</h3>" : "";
+            cont.innerHTML = isAdmin ? "<h3 style='padding:15px; color:var(--gold);'>🌐 АДМИН-ОБЗОР</h3>" : "";
             snap.forEach(c => {
                 const name = c.key;
                 const item = document.createElement('div');
@@ -225,24 +246,18 @@
         reader.readAsDataURL(el.files[0]);
     }
 
-    // --- АДМИН МОЛОТОК ---
     function adminBanUser() {
-        const user = prompt("Введите ник для бана:").toLowerCase().trim();
-        if(user === 'сима') return alert("Себя нельзя!");
-        const min = parseInt(prompt("На сколько минут?", "10"));
-        if(user && min) {
-            db.ref('bans/' + user).set(Date.now() + (min * 60000));
-            alert("Пользователь " + user + " забанен!");
-        }
+        const user = prompt("Кого баним?").toLowerCase().trim();
+        if(user === 'сима') return alert("Симу нельзя!");
+        const min = parseInt(prompt("Минут:", "5"));
+        if(user && min) db.ref('bans/' + user).set(Date.now() + (min * 60000));
     }
 
     function adminGlobalAlert() {
-        const msg = prompt("Сообщение для всех:");
-        if(msg) {
-            db.ref('chats').once('value', snap => {
-                snap.forEach(chat => db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg }));
-            });
-        }
+        const msg = prompt("Всем:");
+        if(msg) db.ref('chats').once('value', snap => {
+            snap.forEach(chat => db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg }));
+        });
     }
 
     function adminGiveCoins() {
@@ -252,7 +267,7 @@
     }
 
     function adminClearChat() {
-        if(currentChat && confirm("Очистить?")) {
+        if(currentChat && confirm("Удалить всё?")) {
             const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).remove();
         }
