@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -96,7 +96,6 @@
     let clickCount = 0;
     let myCoins = 0;
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ КЛИКА
     function adminClick() {
         if(myNick && myNick.toLowerCase() === 'сима') {
             clickCount++;
@@ -139,7 +138,8 @@
     }
 
     function sendGift(name, price) {
-        const id = [myNick, currentChat].sort().join('_');
+        if(!currentChat) return;
+        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
         db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
         db.ref('users/' + myNick + '/coins').set(myCoins - price);
     }
@@ -159,11 +159,15 @@
     function openChat(t) {
         currentChat = t;
         switchTab('chat');
-        const id = [myNick, t].sort().join('_');
+        
+        // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: если в t есть '_', значит это прямой ID чата (админ-режим)
+        const id = t.includes('_') ? t : [myNick, t].sort().join('_');
+        
         db.ref('chats/' + id).off();
         db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
+            if(!snap.exists()) win.innerHTML = "<div style='text-align:center; opacity:0.3; padding:20px;'>Пусто</div>";
             snap.forEach(c => {
                 const m = c.val();
                 const cls = m.u === myNick ? 'me' : 'them';
@@ -177,22 +181,21 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         cont.innerHTML = "";
+        
         if(isAdmin && myNick.toLowerCase() === 'сима') {
             db.ref('chats').on('value', snap => {
-                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
+                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Глобальный доступ:</h3>";
                 snap.forEach(chat => {
-                    const id = chat.key;
+                    const chatId = chat.key;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
                     item.style.background = "#1a2430";
                     item.style.margin = "5px 10px";
                     item.style.borderRadius = "10px";
-                    item.innerHTML = `🌐 ${id.replace('_', ' ↔ ')}`;
-                    item.onclick = () => { 
-                        const parts = id.split('_');
-                        // Админ открывает чат как один из участников
-                        openChat(parts[0] === myNick ? parts[1] : parts[0]); 
-                    };
+                    item.innerHTML = `🌐 <b>Чат:</b> ${chatId.replace('_', ' ↔ ')}`;
+                    
+                    // Передаем полный ID чата для открытия
+                    item.onclick = () => openChat(chatId);
                     cont.appendChild(item);
                 });
             });
@@ -214,7 +217,7 @@
     function sendMsg() {
         const i = document.getElementById('msg-input');
         if(!i.value || !currentChat) return;
-        const id = [myNick, currentChat].sort().join('_');
+        const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
         db.ref('chats/' + id).push({ u: myNick, t: i.value });
         i.value = "";
         db.ref('users/' + myNick + '/coins').transaction(c => (c || 0) + 1);
@@ -224,7 +227,7 @@
         if(!el.files[0] || !currentChat) return;
         const r = new FileReader();
         r.onload = e => {
-            const id = [myNick, currentChat].sort().join('_');
+            const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
             db.ref('chats/' + id).push({ u: myNick, img: e.target.result });
         };
         r.readAsDataURL(el.files[0]);
@@ -243,4 +246,3 @@
 </script>
 </body>
 </html>
-          
