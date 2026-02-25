@@ -17,13 +17,14 @@
         .screen { flex: 1; display: none; overflow-y: auto; flex-direction: column; }
         .screen.active { display: flex; }
         .profile-card { padding: 20px; text-align: center; }
-        .p-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; }
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 120px; }
+        .p-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); margin: 0 auto 15px; border: 3px solid var(--blue); object-fit: cover; cursor: pointer; display: block; }
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; padding-bottom: 140px; }
         .bubble { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; position: relative; }
         .bubble img { max-width: 100%; border-radius: 10px; display: block; }
         .me { background: var(--msg-me); align-self: flex-end; border-bottom-right-radius: 2px; }
         .them { background: var(--msg-them); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .input-panel { background: var(--panel); padding: 12px 12px 35px; display: flex; gap: 10px; position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #000; }
+        .gift-tag { font-size: 12px; color: var(--gold); font-weight: bold; margin-bottom: 4px; display: block; }
+        .input-panel { background: var(--panel); padding: 12px 12px 40px; display: flex; gap: 10px; position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #000; }
         input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #333; background: var(--bg); color: white; outline: none; box-sizing: border-box; }
         .chat-item { padding: 15px; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     </style>
@@ -33,7 +34,7 @@
 <div class="app">
     <header>
         <b id="header-title">Elades VIP</b>
-        <div id="coin-display" style="color: var(--gold); font-size: 14px;">💰 0</div>
+        <div id="coin-display" style="color: var(--gold); font-size: 14px; font-weight: bold;">💰 0</div>
     </header>
     <div class="tabs" id="main-tabs">
         <div class="tab active" onclick="switchTab('list')">💬 Чаты</div>
@@ -42,29 +43,34 @@
     </div>
 
     <div id="screen-list" class="screen active"><div id="chats-container"></div></div>
+    
     <div id="screen-search" class="screen">
         <div style="padding: 20px;">
             <input type="text" id="search-nick" placeholder="Ник друга...">
-            <button onclick="startNewChat()" style="width:100%; margin-top:10px; padding:15px; background:var(--blue); color:white; border:none; border-radius:10px;">Найти</button>
+            <button onclick="startNewChat()" style="width:100%; margin-top:10px; padding:15px; background:var(--blue); color:white; border:none; border-radius:10px; font-weight: bold;">Найти и написать</button>
         </div>
     </div>
+
     <div id="screen-profile" class="screen">
         <div class="profile-card">
             <img id="my-p-img" src="https://via.placeholder.com/100" class="p-avatar" onclick="adminClick()">
             <input type="file" id="p-file" hidden onchange="upAvatar(this)">
-            <button onclick="document.getElementById('p-file').click()" style="background:none; border:1px solid var(--blue); color:var(--blue); padding:5px 10px; border-radius:5px; margin-bottom:10px;">Изменить фото</button>
-            <h2 id="my-p-nick"></h2>
-            <div style="color:var(--gold); margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
-            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()"></textarea>
+            <button onclick="document.getElementById('p-file').click()" style="background:none; border:1px solid var(--blue); color:var(--blue); padding:8px 15px; border-radius:8px; margin-bottom:15px; font-size: 12px;">Изменить фото</button>
+            <h2 id="my-p-nick" style="margin: 0 0 5px 0;"></h2>
+            <div style="color:var(--gold); font-size: 20px; margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
+            <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="height: 80px;"></textarea>
+            <p style="font-size: 10px; opacity: 0.4; margin-top: 20px;">v. 2.0 VIP Edition</p>
         </div>
     </div>
+
     <div id="screen-chat" class="screen">
-        <div style="background: var(--panel); padding: 10px; color: var(--blue);" onclick="switchTab('list')">⬅️ Назад</div>
+        <div style="background: var(--panel); padding: 12px; color: var(--blue); font-weight: bold; border-bottom: 1px solid #000;" onclick="switchTab('list')">⬅️ Назад к списку</div>
         <div id="chat-window"></div>
         <div class="input-panel">
-            <label style="cursor:pointer">🖼️<input type="file" hidden onchange="uploadImg(this)"></label>
+            <div onclick="openGifts()" style="cursor:pointer; font-size:22px;">🎁</div>
+            <label style="cursor:pointer; font-size:22px;">🖼️<input type="file" hidden onchange="uploadImg(this)"></label>
             <input type="text" id="msg-input" placeholder="Сообщение...">
-            <div onclick="sendMsg()" style="cursor:pointer; font-size:20px;">🚀</div>
+            <div onclick="sendMsg()" style="cursor:pointer; font-size:22px;">🚀</div>
         </div>
     </div>
 </div>
@@ -88,6 +94,7 @@
 
     let isAdmin = false;
     let clickCount = 0;
+    let myCoins = 0;
 
     function adminClick() {
         if(myNick === 'СИМА') {
@@ -103,7 +110,9 @@
     function switchTab(s) {
         document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('screen-' + s).classList.add('active');
+        const targetScreen = document.getElementById('screen-' + s);
+        if(targetScreen) targetScreen.classList.add('active');
+        
         document.getElementById('main-tabs').style.display = (s === 'chat') ? 'none' : 'flex';
         if(s === 'profile') loadProfile();
         if(s === 'list') loadChatList();
@@ -115,10 +124,23 @@
             const d = snap.val() || {};
             if(d.avatar) document.getElementById('my-p-img').src = d.avatar;
             if(d.bio) document.getElementById('my-p-bio').value = d.bio;
-            const c = d.coins || 0;
-            document.getElementById('my-p-coins').innerText = c;
-            document.getElementById('coin-display').innerText = "💰 " + c;
+            myCoins = d.coins || 0;
+            document.getElementById('my-p-coins').innerText = myCoins;
+            document.getElementById('coin-display').innerText = "💰 " + myCoins;
         });
+    }
+
+    function openGifts() {
+        const gift = prompt("Выберите подарок:\n1. Бриллиант (50 💎)\n2. Медвежонок (20 💎)\nВведите номер:");
+        if(gift === "1" && myCoins >= 50) sendGift("💎 Бриллиант", 50);
+        else if(gift === "2" && myCoins >= 20) sendGift("🧸 Медвежонок", 20);
+        else alert("Недостаточно монет или неверный выбор!");
+    }
+
+    function sendGift(name, price) {
+        const id = [myNick, currentChat].sort().join('_');
+        db.ref('chats/' + id).push({ u: myNick, t: name, isGift: true });
+        db.ref('users/' + myNick + '/coins').set(myCoins - price);
     }
 
     function upAvatar(el) {
@@ -136,12 +158,15 @@
         currentChat = t;
         switchTab('chat');
         const id = [myNick, t].sort().join('_');
+        db.ref('chats/' + id).off();
         db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
             snap.forEach(c => {
                 const m = c.val();
-                win.innerHTML += `<div class="bubble ${m.u===myNick?'me':'them'}"><b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}">`:''}</div>`;
+                const cls = m.u === myNick ? 'me' : 'them';
+                const giftHtml = m.isGift ? `<span class="gift-tag">🎁 ПОДАРОК</span>` : '';
+                win.innerHTML += `<div class="bubble ${cls}">${giftHtml}<b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}">`:''}</div>`;
             });
             win.scrollTop = win.scrollHeight;
         });
@@ -152,24 +177,30 @@
         cont.innerHTML = "";
         if(isAdmin && myNick === 'СИМА') {
             db.ref('chats').on('value', snap => {
-                cont.innerHTML = "<h3 style='padding:10px; color:var(--gold)'>Все чаты системы:</h3>";
+                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
                 snap.forEach(chat => {
                     const id = chat.key;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
                     item.style.background = "#1a2430";
-                    item.innerHTML = `📡 ${id.replace('_', ' ↔ ')}`;
-                    item.onclick = () => { currentChat = id.split('_')[0]; openChat(id.split('_')[0] === myNick ? id.split('_')[1] : id.split('_')[0]); };
+                    item.style.margin = "5px 10px";
+                    item.style.borderRadius = "10px";
+                    item.innerHTML = `🌐 ${id.replace('_', ' ↔ ')}`;
+                    item.onclick = () => { 
+                        const parts = id.split('_');
+                        openChat(parts[0] === myNick ? parts[1] : parts[0]); 
+                    };
                     cont.appendChild(item);
                 });
             });
         } else {
             db.ref('contacts/' + myNick).on('value', snap => {
+                cont.innerHTML = "";
                 snap.forEach(c => {
                     const n = c.key;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
-                    item.innerHTML = `👤 @${n}`;
+                    item.innerHTML = `<div style="width:40px; height:40px; border-radius:50%; background:var(--blue); display:flex; align-items:center; justify-content:center; font-weight:bold;">${n[0].toUpperCase()}</div><b>@${n}</b>`;
                     item.onclick = () => openChat(n);
                     cont.appendChild(item);
                 });
@@ -203,6 +234,7 @@
             openChat(t);
         }
     }
+    loadProfile();
     loadChatList();
 </script>
 </body>
