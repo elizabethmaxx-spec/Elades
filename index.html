@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -96,8 +96,9 @@
     let clickCount = 0;
     let myCoins = 0;
 
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ КЛИКА
     function adminClick() {
-        if(myNick === 'СИМА') {
+        if(myNick && myNick.toLowerCase() === 'сима') {
             clickCount++;
             if(clickCount >= 5) {
                 isAdmin = true;
@@ -134,7 +135,7 @@
         const gift = prompt("Выберите подарок:\n1. Бриллиант (50 💎)\n2. Медвежонок (20 💎)\nВведите номер:");
         if(gift === "1" && myCoins >= 50) sendGift("💎 Бриллиант", 50);
         else if(gift === "2" && myCoins >= 20) sendGift("🧸 Медвежонок", 20);
-        else alert("Недостаточно монет или неверный выбор!");
+        else if(gift) alert("Недостаточно монет или неверный выбор!");
     }
 
     function sendGift(name, price) {
@@ -144,6 +145,7 @@
     }
 
     function upAvatar(el) {
+        if(!el.files[0]) return;
         const r = new FileReader();
         r.onload = e => db.ref('users/' + myNick + '/avatar').set(e.target.result);
         r.readAsDataURL(el.files[0]);
@@ -175,7 +177,7 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         cont.innerHTML = "";
-        if(isAdmin && myNick === 'сима') {
+        if(isAdmin && myNick.toLowerCase() === 'сима') {
             db.ref('chats').on('value', snap => {
                 cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
                 snap.forEach(chat => {
@@ -188,6 +190,7 @@
                     item.innerHTML = `🌐 ${id.replace('_', ' ↔ ')}`;
                     item.onclick = () => { 
                         const parts = id.split('_');
+                        // Админ открывает чат как один из участников
                         openChat(parts[0] === myNick ? parts[1] : parts[0]); 
                     };
                     cont.appendChild(item);
@@ -218,6 +221,7 @@
     }
 
     function uploadImg(el) {
+        if(!el.files[0] || !currentChat) return;
         const r = new FileReader();
         r.onload = e => {
             const id = [myNick, currentChat].sort().join('_');
@@ -228,7 +232,7 @@
 
     function startNewChat() {
         const t = document.getElementById('search-nick').value.trim().toLowerCase();
-        if(t && t !== myNick) {
+        if(t && t !== myNick.toLowerCase()) {
             db.ref('contacts/'+myNick+'/'+t).set(true);
             db.ref('contacts/'+t+'/'+myNick).set(true);
             openChat(t);
@@ -239,3 +243,4 @@
 </script>
 </body>
 </html>
+          
