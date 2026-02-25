@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP</title>
+    <title>Elades VIP (Admin Edition)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; --gold: #f39c12; }
+        :root { --bg: #0e1621; --panel: #17212b; --blue: #5288c1; --text: #ffffff; --msg-me: #2b5278; --msg-them: #182533; --gold: #f39c12; --red: #e74c3c; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow: hidden; }
         .app { display: flex; flex-direction: column; height: 100vh; }
         header { background: var(--panel); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #000; z-index: 10; }
@@ -27,6 +27,10 @@
         .input-panel { background: var(--panel); padding: 12px 12px 40px; display: flex; gap: 10px; position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #000; }
         input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #333; background: var(--bg); color: white; outline: none; box-sizing: border-box; }
         .chat-item { padding: 15px; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        /* Admin UI */
+        .admin-panel { background: #1a2430; margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); display: none; }
+        .admin-btn { background: var(--gold); color: black; border: none; padding: 8px; border-radius: 5px; font-weight: bold; margin: 5px; cursor: pointer; width: calc(50% - 10px); font-size: 11px; }
+        .admin-btn.danger { background: var(--red); color: white; }
     </style>
 </head>
 <body>
@@ -59,12 +63,22 @@
             <h2 id="my-p-nick" style="margin: 0 0 5px 0;"></h2>
             <div style="color:var(--gold); font-size: 20px; margin-bottom:15px;">Баланс: <span id="my-p-coins">0</span> 💎</div>
             <textarea id="my-p-bio" placeholder="О себе..." onchange="saveBio()" style="height: 80px;"></textarea>
-            <p style="font-size: 10px; opacity: 0.4; margin-top: 20px;">v. 2.0 VIP Edition</p>
+            
+            <div id="admin-tools" class="admin-panel">
+                <h4 style="margin-top:0; color:var(--gold);">🛠 ПАНЕЛЬ СИМЫ</h4>
+                <div id="admin-stats" style="font-size:11px; margin-bottom:10px;">Активных чатов: ...</div>
+                <button class="admin-btn" onclick="adminGlobalAlert()">📢 Рассылка</button>
+                <button class="admin-btn" onclick="adminGiveCoins()">💎 Дать монеты</button>
+                <button class="admin-btn danger" onclick="adminClearChat()">🗑 Очистить чат</button>
+                <button class="admin-btn danger" onclick="location.reload()">🔄 Выйти из админ</button>
+            </div>
+            
+            <p style="font-size: 10px; opacity: 0.4; margin-top: 20px;">v. 3.0 Admin Panel Enabled</p>
         </div>
     </div>
 
     <div id="screen-chat" class="screen">
-        <div style="background: var(--panel); padding: 12px; color: var(--blue); font-weight: bold; border-bottom: 1px solid #000;" onclick="switchTab('list')">⬅️ Назад к списку</div>
+        <div style="background: var(--panel); padding: 12px; color: var(--blue); font-weight: bold; border-bottom: 1px solid #000;" onclick="switchTab('list')">⬅️ Назад</div>
         <div id="chat-window"></div>
         <div class="input-panel">
             <div onclick="openGifts()" style="cursor:pointer; font-size:22px;">🎁</div>
@@ -101,18 +115,54 @@
             clickCount++;
             if(clickCount >= 5) {
                 isAdmin = true;
-                alert("РЕЖИМ АДМИНИСТРАТОРА АКТИВИРОВАН 🕵️‍♀️");
+                document.getElementById('admin-tools').style.display = 'block';
+                document.getElementById('header-title').innerText = "Elades (ADMIN)";
+                alert("ПРИВЕТ, СИМА! АДМИН-ПАНЕЛЬ В ПРОФИЛЕ ✨");
                 loadChatList();
+                // Загружаем статистику чатов
+                db.ref('chats').once('value', s => {
+                    document.getElementById('admin-stats').innerText = "Всего чатов в базе: " + s.numChildren();
+                });
             }
         }
     }
+
+    // --- АДМИН ФУНКЦИИ ---
+    function adminGlobalAlert() {
+        const msg = prompt("Введите сообщение для всех пользователей:");
+        if(!msg) return;
+        db.ref('chats').once('value', snap => {
+            snap.forEach(chat => {
+                db.ref('chats/' + chat.key).push({ u: "SYSTEM", t: "📢 " + msg });
+            });
+            alert("Рассылка отправлена!");
+        });
+    }
+
+    function adminGiveCoins() {
+        const user = prompt("Кому дать монеты (ник):", myNick);
+        const amount = parseInt(prompt("Сколько монет добавить?", "1000"));
+        if(user && amount) {
+            db.ref('users/' + user + '/coins').transaction(c => (c || 0) + amount);
+            alert("Монетки выданы!");
+        }
+    }
+
+    function adminClearChat() {
+        if(!currentChat) return alert("Сначала открой чат, который хочешь очистить!");
+        if(confirm("Удалить ВСЕ сообщения в этом чате?")) {
+            const id = currentChat.includes('_') ? currentChat : [myNick, currentChat].sort().join('_');
+            db.ref('chats/' + id).remove();
+            alert("Чат очищен!");
+        }
+    }
+    // ---------------------
 
     function switchTab(s) {
         document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         const targetScreen = document.getElementById('screen-' + s);
         if(targetScreen) targetScreen.classList.add('active');
-        
         document.getElementById('main-tabs').style.display = (s === 'chat') ? 'none' : 'flex';
         if(s === 'profile') loadProfile();
         if(s === 'list') loadChatList();
@@ -128,13 +178,14 @@
             document.getElementById('my-p-coins').innerText = myCoins;
             document.getElementById('coin-display').innerText = "💰 " + myCoins;
         });
+        if(isAdmin) document.getElementById('admin-tools').style.display = 'block';
     }
 
     function openGifts() {
         const gift = prompt("Выберите подарок:\n1. Бриллиант (50 💎)\n2. Медвежонок (20 💎)\nВведите номер:");
         if(gift === "1" && myCoins >= 50) sendGift("💎 Бриллиант", 50);
         else if(gift === "2" && myCoins >= 20) sendGift("🧸 Медвежонок", 20);
-        else if(gift) alert("Недостаточно монет или неверный выбор!");
+        else if(gift) alert("Недостаточно монет!");
     }
 
     function sendGift(name, price) {
@@ -159,20 +210,17 @@
     function openChat(t) {
         currentChat = t;
         switchTab('chat');
-        
-        // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: если в t есть '_', значит это прямой ID чата (админ-режим)
         const id = t.includes('_') ? t : [myNick, t].sort().join('_');
-        
         db.ref('chats/' + id).off();
         db.ref('chats/' + id).on('value', snap => {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
-            if(!snap.exists()) win.innerHTML = "<div style='text-align:center; opacity:0.3; padding:20px;'>Пусто</div>";
             snap.forEach(c => {
                 const m = c.val();
-                const cls = m.u === myNick ? 'me' : 'them';
+                const cls = m.u === myNick ? 'me' : (m.u === 'SYSTEM' ? 'system' : 'them');
                 const giftHtml = m.isGift ? `<span class="gift-tag">🎁 ПОДАРОК</span>` : '';
-                win.innerHTML += `<div class="bubble ${cls}">${giftHtml}<b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}">`:''}</div>`;
+                const style = m.u === 'SYSTEM' ? 'background:#f39c1233; align-self:center; width:90%; font-size:12px; border-radius:10px;' : '';
+                win.innerHTML += `<div class="bubble ${cls}" style="${style}">${giftHtml}<b>${m.u}:</b><br>${m.t||''}${m.img?`<img src="${m.img}">`:''}</div>`;
             });
             win.scrollTop = win.scrollHeight;
         });
@@ -181,20 +229,15 @@
     function loadChatList() {
         const cont = document.getElementById('chats-container');
         cont.innerHTML = "";
-        
         if(isAdmin && myNick.toLowerCase() === 'сима') {
             db.ref('chats').on('value', snap => {
-                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Глобальный доступ:</h3>";
+                cont.innerHTML = "<h3 style='padding:15px; color:var(--gold); margin:0;'>📡 Все чаты системы:</h3>";
                 snap.forEach(chat => {
                     const chatId = chat.key;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
                     item.style.background = "#1a2430";
-                    item.style.margin = "5px 10px";
-                    item.style.borderRadius = "10px";
-                    item.innerHTML = `🌐 <b>Чат:</b> ${chatId.replace('_', ' ↔ ')}`;
-                    
-                    // Передаем полный ID чата для открытия
+                    item.innerHTML = `🌐 <b>${chatId.replace('_', ' ↔ ')}</b>`;
                     item.onclick = () => openChat(chatId);
                     cont.appendChild(item);
                 });
@@ -246,3 +289,4 @@
 </script>
 </body>
 </html>
+                                   
