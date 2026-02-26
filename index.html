@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elades VIP Fixed</title>
+    <title>Elades VIP Final</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -118,7 +118,36 @@
     let currentChat = null;
     let banCheckInterval = null;
 
-    // СИСТЕМА БАНА
+    // --- СИСТЕМА УВЕДОМЛЕНИЙ ---
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+
+    function sendNotify(sender, text) {
+        if (Notification.permission === "granted" && document.hidden) {
+            new Notification("Elades VIP", {
+                body: `${sender} отправил вам сообщение: ${text}`,
+                icon: "https://via.placeholder.com/100"
+            });
+        }
+    }
+
+    // Слушатель новых сообщений для уведомлений
+    db.ref('contacts/' + myNick).on('child_added', snap => {
+        const otherUser = snap.key;
+        const chatId = [myNick, otherUser].sort().join('_');
+        
+        // Следим за каждым чатом пользователя
+        db.ref('chats/' + chatId).limitToLast(1).on('child_added', msgSnap => {
+            const m = msgSnap.val();
+            // Уведомляем только если сообщение чужое и не системное
+            if (m.u !== myNick && m.u !== "SYSTEM") {
+                sendNotify(m.u, m.t || "Изображение или подарок");
+            }
+        });
+    });
+    // ---------------------------
+
     function initBanSystem() {
         db.ref('bans/' + myNick).on('value', snap => {
             const until = snap.val();
@@ -295,7 +324,6 @@
         }
     }
 
-    // Инициализация
     initBanSystem();
     loadProfile();
     loadChatList();
